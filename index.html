@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="">
+<head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <meta name="apple-mobile-web-app-capable" content="yes"> <meta name="mobile-web-app-capable" content="yes"> <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/a9/ae/b1/a9aeb17892c71d37699639da663ba106.jpg"> <title>Piscisense</title> <script src="https://cdn.tailwindcss.com"></script> <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <link rel="preconnect" href="https://fonts.googleapis.com"> <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet"> <style>
+        /* Define a fonte padrão, a cor de fundo e remove o realce de toque em dispositivos móveis */
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #F8F7F2;
+            -webkit-tap-highlight-color: transparent; /* Remove o destaque azul ao tocar em links/botões no mobile */
+            transition: background-color 0.3s ease;
+        }
+
+        /* Define as variáveis de cores globais para manter a consistência do design */
+        :root {
+            --piscisense-blue: #85CBCB;
+            --piscisense-green-light: #A8DEE0;
+            --piscisense-yellow: #F9E2AE;
+            --piscisense-orange: #FDC68D;
+            --piscisense-green-dark: #A7D676;
+            --piscisense-text: #2c3e50;
+        }
+
+        /* Estilização da animação de carregamento (spinner) */
+        .loader {
+            border-top-color: var(--piscisense-blue); /* A cor da parte giratória do loader */
+            animation: spinner 1.5s linear infinite; /* Aplica a animação 'spinner' */
+        }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } /* Define a rotação da animação */
+
+        /* Animações de fade-in e fade-out para transições de tela suaves */
+        .fade-out { animation: fadeOut 0.5s ease-out forwards; }
+        .fade-in { animation: fadeIn 0.5s ease-in forwards; }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } } /* De visível para invisível */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } /* De invisível para visível */
+
+        /* Estilização específica para os elementos gerados pela IA, garantindo a formatação correta */
+        #ai-response strong { /* Títulos em negrito */
+            color: var(--piscisense-text);
+            font-weight: 700;
+        }
+         #ai-response ul { /* Listas */
+            list-style-type: disc; /* Estilo de bolinha */
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+        #ai-response li { /* Itens da lista */
+            margin-bottom: 4px;
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'piscisense-blue': 'var(--piscisense-blue)',
+                        'piscisense-green-light': 'var(--piscisense-green-light)',
+                        'piscisense-yellow': 'var(--piscisense-yellow)',
+                        'piscisense-orange': 'var(--piscisense-orange)',
+                        'piscisense-green-dark': 'var(--piscisense-green-dark)',
+                        'piscisense-text': 'var(--piscisense-text)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div id="splash-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+        <div class="flex items-center justify-center">
+            <img src="https://i.pinimg.com/736x/a9/ae/b1/a9aeb17892c71d37699639da663ba106.jpg" alt="Logo Piscisense" class="w-24 h-24">
+            <h1 class="text-5xl font-extrabold text-piscisense-text ml-4">Piscisense</h1>
+        </div>
+        <p class="text-piscisense-text text-lg mt-4 text-center max-w-xs">Saúde, Ciência e Inovação até a última gota d'água</p>
+    </div>
+
+    <div id="main-content" class="flex items-center justify-center min-h-screen p-4 opacity-0 hidden">
+        <div class="w-full max-w-md md:max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8 transition-colors duration-300">
+            
+            <div id="initial-setup">
+                <div id="config-screen">
+                    <div class="flex items-center justify-center mb-4">
+                        <img src="https://i.pinimg.com/736x/a9/ae/b1/a9aeb17892c71d37699639da663ba106.jpg" alt="Logo Piscisense" class="w-16 h-16">
+                        <h1 class="text-3xl font-bold text-piscisense-text ml-3">Piscisense</h1>
+                    </div>
+                    <p class="text-piscisense-text text-center mb-6">Para começar, insira o seu Token de Autenticação do Blynk.</p>
+                    <input type="text" id="blynk-token-input" placeholder="O seu BLYNK_AUTH_TOKEN aqui" class="w-full px-4 py-3 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-piscisense-blue transition">
+                    <button id="save-token-button" class="w-full mt-4 bg-piscisense-blue text-white font-bold py-3 rounded-lg hover:bg-opacity-80 transition-colors">Verificar Token</button>
+                    <p id="error-message" class="text-red-500 text-center mt-4 hidden"></p>
+                </div>
+                
+                <div id="questionnaire-screen" class="hidden">
+                    <h2 class="text-2xl font-bold text-piscisense-text mb-1 text-center">Sobre o seu Ambiente</h2>
+                    <p class="text-piscisense-text text-center mb-6">Ajude-nos a personalizar a sua experiência.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="species-input" class="block text-sm font-medium text-gray-700">Principal espécie de peixe:</label>
+                            <select id="species-input" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue bg-white">
+                                <option value="" disabled selected>Selecione a espécie...</option>
+                                <option value="Tilápia">Tilápia</option>
+                                <option value="Tambaqui">Tambaqui</option>
+                                <option value="Pacu">Pacu</option>
+                                <option value="Pintado">Pintado</option>
+                                <option value="Carpa">Carpa</option>
+                                <option value="Dourado">Dourado</option>
+                                <option value="Outra">Outra</option>
+                            </select>
+                            <div id="other-species-container" class="hidden mt-2">
+                                <label for="other-species-input" class="block text-sm font-medium text-gray-700">Especifique a espécie:</label>
+                                <input type="text" id="other-species-input" placeholder="Ex: Pirarucu" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="volume-input" class="block text-sm font-medium text-gray-700">Volume do tanque (em litros):</label>
+                            <input type="number" id="volume-input" placeholder="Ex: 10000" min="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue">
+                        </div>
+                        <div>
+                            <label for="fish-count-input" class="block text-sm font-medium text-gray-700">Quantidade aproximada de peixes:</label>
+                            <input type="number" id="fish-count-input" placeholder="Ex: 150" step="1" min="0" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue">
+                        </div>
+                        <div>
+                            <label for="fish-weight-input" class="block text-sm font-medium text-gray-700">Peso médio atual dos peixes (em gramas):</label>
+                            <input type="number" id="fish-weight-input" placeholder="Ex: 100" min="0" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue">
+                        </div>
+                        <div>
+                            <label for="location-input" class="block text-sm font-medium text-gray-700">Localização (Cidade):</label>
+                            <input type="text" id="location-input" placeholder="Ex: Franca, BR" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-piscisense-blue focus:border-piscisense-blue">
+                        </div>
+                    </div>
+                    <button id="save-questionnaire-button" class="w-full mt-6 bg-piscisense-blue text-white font-bold py-3 rounded-lg hover:bg-opacity-80 transition-colors">Salvar e Iniciar Monitoramento</button>
+                </div>
+            </div>
+
+            <div id="dashboard-screen" class="hidden">
+                 <div class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+                      <div class="flex items-center">
+                          <img src="https://i.pinimg.com/736x/a9/ae/b1/a9aeb17892c71d37699639da663ba106.jpg" alt="Logo Piscisense" class="w-10 h-10">
+                          <h1 class="text-2xl font-bold text-piscisense-text ml-2">Piscisense</h1>
+                      </div>
+                      <div class="flex items-center gap-2">
+                            <div class="text-right">
+                                  <div class="flex items-center justify-end space-x-2">
+                                      <div id="status-indicator" class="w-4 h-4 rounded-full"></div> <span id="status-text" class="text-sm font-medium text-gray-600">A conectar...</span>
+                                  </div>
+                                 <span id="last-updated" class="text-xs text-gray-400"></span> </div>
+                            <button id="open-ai-button" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                            </button>
+                            <button id="settings-button" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                                 <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+                      </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-piscisense-text">Temperatura</p>
+                            <svg class="w-6 h-6 text-piscisense-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <p id="temp-value" class="text-4xl font-bold text-piscisense-text">--</p>
+                            <p id="temp-status" class="px-3 py-1 text-sm font-semibold text-white rounded-full">--</p> </div>
+                    </div>
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                       <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-piscisense-text">pH</p>
+                            <svg class="w-6 h-6 text-piscisense-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2v6h6M16 13H8M16 17H8M10 9H8"></path></svg>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <p id="ph-value" class="text-4xl font-bold text-piscisense-text">--</p>
+                            <p id="ph-status" class="px-3 py-1 text-sm font-semibold text-white rounded-full">--</p>
+                        </div>
+                    </div>
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-piscisense-text">Turbidez</p>
+                             <svg class="w-6 h-6 text-piscisense-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <p id="turb-value" class="text-4xl font-bold text-piscisense-text">--</p>
+                            <p id="turb-status" class="px-3 py-1 text-sm font-semibold text-white rounded-full">--</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="weather-panel" class="mt-6 bg-gray-50 p-5 rounded-xl border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-piscisense-text">Previsão do Tempo Local</h2>
+                        <svg class="w-6 h-6 text-piscisense-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                    </div>
+                    <div id="weather-info" class="mt-2">
+                        <p class="text-sm text-gray-500">Informe sua localização nas configurações para ver a previsão.</p>
+                    </div>
+                </div>
+                
+                <div id="actions-panel" class="mt-6 bg-gray-50 p-5 rounded-xl border border-gray-200">
+                    <h2 class="text-lg font-bold text-piscisense-text mb-4">Diagnóstico e Ações Recomendadas</h2>
+                    <div id="actions-list" class="space-y-3"></div> </div>
+                
+                <div id="calculator-panel" class="mt-6 bg-gray-50 p-5 rounded-xl border border-gray-200">
+                      <div class="flex items-center justify-between">
+                          <h2 class="text-lg font-bold text-piscisense-text">Cálculos de Gestão</h2>
+                          <svg class="w-6 h-6 text-piscisense-green-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M12 8h.01M15 8h.01M15 14h.01M18 17h.01M12 17h.01M6 14h.01M6 11h.01M6 8h.01M6 5h.01M9 5h.01M12 5h.01M15 5h.01M18 5h.01M18 8h.01M18 11h.01M18 14h.01"></path></svg>
+                      </div>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                          <div>
+                              <p class="text-sm text-gray-500">Biomassa Estimada (kg)</p>
+                              <p id="biomass-value" class="text-2xl font-bold text-piscisense-text">--</p>
+                          </div>
+                          <div>
+                              <p class="text-sm text-gray-500">Ração Diária Recomendada (g)</p>
+                              <p id="feeding-value" class="text-2xl font-bold text-piscisense-text">--</p>
+                          </div>
+                      </div>
+                       <p class="text-xs text-gray-400 mt-3">*Cálculos baseados nos dados fornecidos e na temperatura atual da água.</p>
+                </div>
+                
+                <div class="mt-6 grid grid-cols-1 gap-4">
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                        <p class="text-sm font-medium text-piscisense-text mb-2">Histórico de Temperatura (°C)</p>
+                        <canvas id="tempChart"></canvas> </div>
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                        <p class="text-sm font-medium text-piscisense-text mb-2">Histórico de pH</p>
+                        <canvas id="phChart"></canvas> </div>
+                    <div class="bg-piscisense-green-light bg-opacity-30 p-5 rounded-xl">
+                        <p class="text-sm font-medium text-piscisense-text mb-2">Histórico de Turbidez (NTU)</p>
+                        <canvas id="turbChart"></canvas> </div>
+                </div>
+
+                 <button id="reset-button" class="w-full mt-6 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm">Apagar Dados e Trocar Token</button>
+            </div>
+            
+            <div id="ai-screen" class="hidden">
+                 <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                          <img src="https://i.pinimg.com/736x/a9/ae/b1/a9aeb17892c71d37699639da663ba106.jpg" alt="Logo Piscisense" class="w-10 h-10">
+                          <h1 class="text-2xl font-bold text-piscisense-text ml-2">Análise Inteligente</h1>
+                      </div>
+                      <button id="back-to-dashboard-button" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                           <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+                 </div>
+                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                      <div class="flex items-center justify-between">
+                           <h2 class="text-lg font-bold text-piscisense-text">Análise do Sistema (IA)</h2>
+                           <svg class="w-6 h-6 text-piscisense-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                      </div>
+                    <p class="text-sm text-gray-500 mt-2 mb-4">Clique no botão para que a nossa IA analise o estado atual do seu sistema e forneça recomendações personalizadas.</p>
+                    <button id="run-ai-button" class="w-full bg-piscisense-blue text-white font-bold py-3 rounded-lg hover:bg-opacity-80 transition-colors">Gerar Análise com IA</button>
+                    <div id="ai-response-container" class="mt-4 hidden">
+                        <div id="ai-loader" class="flex items-center justify-center py-4">
+                            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8"></div>
+                            <p class="ml-3 text-piscisense-text">A nossa IA está a pensar...</p>
+                        </div>
+                        <div id="ai-response" class="text-piscisense-text space-y-2"></div>
+                    </div>
+                 </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- SELEÇÃO DOS ELEMENTOS DO HTML ---
+        const initialSetupContainer = document.getElementById('initial-setup');
+        const splashScreen = document.getElementById('splash-screen');
+        const mainContent = document.getElementById('main-content');
+        const configScreen = document.getElementById('config-screen');
+        const questionnaireScreen = document.getElementById('questionnaire-screen');
+        const dashboardScreen = document.getElementById('dashboard-screen');
+        const aiScreen = document.getElementById('ai-screen');
+        const settingsButton = document.getElementById('settings-button');
+        const biomassValueEl = document.getElementById('biomass-value');
+        const feedingValueEl = document.getElementById('feeding-value');
+        const tokenInput = document.getElementById('blynk-token-input');
+        const saveTokenButton = document.getElementById('save-token-button');
+        const saveQuestionnaireButton = document.getElementById('save-questionnaire-button');
+        const resetButton = document.getElementById('reset-button');
+        const errorMessage = document.getElementById('error-message');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const tempValueEl = document.getElementById('temp-value');
+        const tempStatusEl = document.getElementById('temp-status');
+        const phValueEl = document.getElementById('ph-value');
+        const phStatusEl = document.getElementById('ph-status');
+        const turbValueEl = document.getElementById('turb-value');
+        const turbStatusEl = document.getElementById('turb-status');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const actionsListEl = document.getElementById('actions-list');
+        const speciesInput = document.getElementById('species-input');
+        const volumeInput = document.getElementById('volume-input');
+        const fishCountInput = document.getElementById('fish-count-input');
+        const fishWeightInput = document.getElementById('fish-weight-input');
+        const openAiButton = document.getElementById('open-ai-button');
+        const backToDashboardButton = document.getElementById('back-to-dashboard-button');
+        const runAiButton = document.getElementById('run-ai-button');
+        const aiResponseContainer = document.getElementById('ai-response-container');
+        const aiLoader = document.getElementById('ai-loader');
+        const aiResponseEl = document.getElementById('ai-response');
+        const otherSpeciesContainer = document.getElementById('other-species-container');
+        const otherSpeciesInput = document.getElementById('other-species-input');
+        const locationInput = document.getElementById('location-input');
+        const weatherInfoEl = document.getElementById('weather-info');
+        
+        // --- VARIÁVEIS GLOBAIS DE ESTADO ---
+        let blynkToken = '';
+        let updateInterval;
+        let tempChart, phChart, turbChart;
+        const chartLabels = [], tempData = [], phData = [], turbData = [];
+        const MAX_DATA_POINTS = 20;
+        let lastSensorData = {};
+
+        // --- FUNÇÕES DA ANÁLISE DE INTELIGÊNCIA ARTIFICIAL (IA) ---
+
+        /**
+         * ATENÇÃO: A CHAVE DE API NÃO DEVE ESTAR AQUI EM UM PROJETO REAL.
+         * Esta abordagem expõe sua chave a qualquer pessoa que visite o site.
+         * A solução correta é usar uma função "serverless" (proxy) para proteger a chave.
+         * Para o contexto de um TCC em ambiente controlado, esta implementação é funcional.
+         */
+        async function callGeminiAPI(sensorData, envData) {
+            const apiKey = "AIzaSyCAXZSCJMZychpds3l12ppJHEvkoqRCUbs"; // Chave da API do Google AI.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            
+            const systemPrompt = "Você é Piscisense AI, um assistente especialista em piscicultura, focado em tanques de peixes. Sua missão é fornecer diagnósticos claros e recomendações práticas, em português do Brasil. Formate sua resposta com títulos em negrito (usando markdown: **Título**) e listas com asteriscos. Seja conciso, amigável e direto.";
+            
+            const userPrompt = `Analise a seguinte situação e forneça um diagnóstico e ações recomendadas.\n\n**Dados do Ambiente:**\n* Espécie Principal: ${envData.species || 'Não informado'}\n* Volume do Tanque: ${envData.volume || 'Não informado'} litros\n* Quantidade de Peixes: ${envData.fishCount || 'Não informado'}\n* Peso Médio: ${envData.fishWeight || 'Não informado'} gramas\n\n**Leituras Atuais dos Sensores:**\n* Temperatura da Água: ${sensorData.temp !== null ? sensorData.temp.toFixed(1) + ' °C' : 'Erro'}\n* pH: ${sensorData.ph !== null ? sensorData.ph.toFixed(2) : 'Erro'}\n* Turbidez: ${sensorData.turb !== null ? sensorData.turb.toFixed(0) + ' NTU' : 'Erro'}\n\nForneça um diagnóstico geral e uma lista de ações prioritárias.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) { throw new Error('Falha na comunicação com a API de IA.'); }
+            const result = await response.json();
+            return result.candidates[0].content.parts[0].text;
+        }
+
+        function formatAIResponse(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="block text-piscisense-text font-bold mt-2 mb-1">$1</strong>')
+                .replace(/\* (.*?)(?=\n\*|\n\n|$)/g, '<li>$1</li>')
+                .replace(/(<\/li>)\n/g, '$1')
+                .replace(/(\n)?(<li>.*?<\/li>)/g, '<ul>$2</ul>')
+                .replace(/<\/ul>\s*<ul>/g, '');
+        }
+
+        async function runAIAnalysis() {
+            aiResponseContainer.classList.remove('hidden');
+            aiLoader.classList.remove('hidden');
+            aiResponseEl.classList.add('hidden');
+            runAiButton.disabled = true;
+            runAiButton.innerHTML = '<div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mx-auto"></div>';
+
+            try {
+                const envData = JSON.parse(localStorage.getItem('piscisenseEnvData')) || {};
+                const aiText = await callGeminiAPI(lastSensorData, envData);
+                aiResponseEl.innerHTML = formatAIResponse(aiText);
+            } catch (error) {
+                console.error("Erro na análise de IA:", error);
+                aiResponseEl.innerHTML = `<p class="text-red-500 font-semibold">Ocorreu um erro ao contactar a IA.</p><p class="text-sm text-gray-600">${error.message}. Verifique a chave da API no código e sua conexão.</p>`;
+            } finally {
+                aiLoader.classList.add('hidden');
+                aiResponseEl.classList.remove('hidden');
+                runAiButton.disabled = false;
+                runAiButton.textContent = 'Gerar Nova Análise com IA';
+            }
+        }
+
+        // --- FUNÇÕES DE PREVISÃO DO TEMPO ---
+        
+        async function fetchWeatherData(location) {
+            const apiKey = "299eb21896a32ff9ea7deb4baf3a5f67"; // Chave da API OpenWeather.
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric&lang=pt_br`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status === 404) throw new Error('Cidade não encontrada.');
+                throw new Error('Falha ao buscar dados do tempo.');
+            }
+            return await response.json();
+        }
+
+        function updateWeatherPanel(data, locationName) {
+            let recommendation = { text: `Condições climáticas estáveis.`, color: 'green' };
+            const temp = data.main.temp;
+            const weatherId = data.weather[0].id;
+            const description = data.weather[0].description;
+
+            if (temp > 32) {
+                recommendation = { text: `Onda de calor prevista. Monitore a oxigenação da água e considere sombreamento.`, color: 'red' };
+            } else if (weatherId >= 200 && weatherId < 600) {
+                recommendation = { text: `Chuva prevista. Verifique se a chuva não alterará drasticamente o pH ou a temperatura.`, color: 'orange' };
+            } else if (temp < 18) {
+                recommendation = { text: `Queda de temperatura prevista. Os peixes podem reduzir a alimentação.`, color: 'orange' };
+            }
+
+            const colorClasses = { red: 'text-red-700', orange: 'text-orange-700', green: 'text-green-800' };
+
+            weatherInfoEl.innerHTML = `
+                <p class="text-lg font-bold text-piscisense-text">${locationName}: ${temp.toFixed(1)}°C, ${description}</p>
+                <p class="text-sm ${colorClasses[recommendation.color]} mt-1">${recommendation.text}</p>
+            `;
+        }
+
+        // --- FUNÇÕES DE LÓGICA DO DASHBOARD ---
+
+        function calculateFeeding(temp, biomass) {
+            let feedingRate = 0;
+            if (temp >= 22 && temp <= 30) {
+                feedingRate = 1.5 + (temp - 22) * (1.5 / 6);
+            } else if (temp > 30 && temp <= 32) {
+                feedingRate = 1.0;
+            } else if (temp > 18 && temp < 22) {
+                feedingRate = 1.0;
+            }
+            feedingRate = Math.max(0, Math.min(5, feedingRate));
+            return (biomass * (feedingRate / 100)) * 1000;
+        }
+
+        function updateCalculator(temp, envData) {
+            if (!envData.fishCount || !envData.fishWeight || temp === null) {
+                biomassValueEl.textContent = '--';
+                feedingValueEl.textContent = '--';
+                return;
+            };
+            const biomassKg = (envData.fishCount * envData.fishWeight) / 1000;
+            const dailyFeedGrams = calculateFeeding(temp, biomassKg);
+            biomassValueEl.textContent = biomassKg.toFixed(2);
+            feedingValueEl.textContent = dailyFeedGrams.toFixed(0);
+        }
+        
+        async function fetchBlynkData(vPin) {
+            const url = `https://blynk.cloud/external/api/get?token=${blynkToken}&${vPin}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Falha ao buscar ${vPin}`);
+            return await response.text();
+        }
+
+        function getActionRecommendation(sensor, status, envData) {
+            status = status.toLowerCase();
+            let recommendation = { text: '', color: '' };
+            if (status.includes('erro')) {
+                return { text: 'O sensor está offline ou com falha. Verifique as conexões físicas e reinicie o dispositivo.', color: 'gray' };
+            }
+            switch (sensor) {
+                case 'Temperatura':
+                    if (status.includes('critico')) {
+                        recommendation = { text: `Risco elevado para ${envData.species || 'os peixes'}. Aja imediatamente para corrigir a temperatura.`, color: 'red' };
+                    } else if (status.includes('alerta')) {
+                        recommendation = { text: 'A temperatura aproxima-se de níveis perigosos. Monitorize de perto.', color: 'orange' };
+                    }
+                    break;
+                case 'pH':
+                    if (status.includes('critico')) {
+                        recommendation = { text: `Nível de pH perigoso. Realize uma troca parcial de ${Math.round((envData.volume || 1000) * 0.2)}L de água e use um corretor.`, color: 'red' };
+                    } else if (status.includes('alerta')) {
+                        recommendation = { text: 'O pH está a desviar-se do ideal. Investigue a causa (ex: excesso de ração).', color: 'orange' };
+                    }
+                    break;
+                case 'Turbidez':
+                   if (status.includes('critico')) {
+                        recommendation = { text: `Água extremamente turva para ${envData.fishCount || ''} peixes. Verifique a filtragem e reduza a alimentação.`, color: 'red' };
+                    } else if (status.includes('alerta') || status.includes('elevada')) {
+                        recommendation = { text: 'A turbidez está a aumentar. Monitore a alimentação e a filtragem.', color: 'orange' };
+                    }
+                    break;
+            }
+            return recommendation;
+        }
+        
+        async function updateDashboard() {
+            statusIndicator.classList.remove('bg-piscisense-green-dark', 'bg-red-500');
+            statusIndicator.classList.add('bg-piscisense-yellow');
+            statusText.textContent = 'A atualizar...';
+            
+            const envData = JSON.parse(localStorage.getItem('piscisenseEnvData')) || {};
+            if (envData.location) {
+                try {
+                    const weatherData = await fetchWeatherData(envData.location);
+                    updateWeatherPanel(weatherData, envData.location);
+                } catch (error) {
+                    console.error("Erro na API de Clima:", error);
+                    weatherInfoEl.innerHTML = `<p class="text-sm text-red-500">${error.message}</p>`;
+                }
+            } else {
+                weatherInfoEl.innerHTML = `<p class="text-sm text-gray-500">Informe sua localização nas configurações para ver a previsão.</p>`;
+            }
+
+            const results = await Promise.allSettled([
+                fetchBlynkData('v0'), fetchBlynkData('v1'), fetchBlynkData('v2'),
+                fetchBlynkData('v3'), fetchBlynkData('v4'), fetchBlynkData('v5')
+            ]);
+            let allOk = true;
+            const now = new Date();
+            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            if(chartLabels.length >= MAX_DATA_POINTS) chartLabels.shift();
+            chartLabels.push(currentTime);
+            
+            const temp = results[0].status === 'fulfilled' ? parseFloat(results[0].value) : null;
+            const turb = results[1].status === 'fulfilled' ? parseFloat(results[1].value) : null;
+            const ph = results[2].status === 'fulfilled' ? parseFloat(results[2].value) : null;
+            lastSensorData = { temp, turb, ph };
+            
+            tempValueEl.textContent = temp !== null ? `${temp.toFixed(1)} °C` : 'Erro';
+            phValueEl.textContent = ph !== null ? ph.toFixed(2) : 'Erro';
+            turbValueEl.textContent = turb !== null ? `${turb.toFixed(0)} NTU` : 'Erro';
+            
+            if(tempData.length >= MAX_DATA_POINTS) tempData.shift();
+            tempData.push(temp);
+            if(phData.length >= MAX_DATA_POINTS) phData.shift();
+            phData.push(ph);
+            if(turbData.length >= MAX_DATA_POINTS) turbData.shift();
+            turbData.push(turb);
+            
+            updateCalculator(temp, envData);
+            
+            const tempStatus = results[3].status === 'fulfilled' ? results[3].value : 'Erro no Sensor';
+            const phStatus = results[4].status === 'fulfilled' ? results[4].value : 'Erro no Sensor';
+            const turbStatus = results[5].status === 'fulfilled' ? results[5].value : 'Erro no Sensor';
+            updateStatusUI(tempStatusEl, tempStatus);
+            updateStatusUI(phStatusEl, phStatus);
+            updateStatusUI(turbStatusEl, turbStatus);
+            
+            actionsListEl.innerHTML = '';
+            let hasIssues = false;
+            const sensors = [{ name: 'Temperatura', status: tempStatus }, { name: 'pH', status: phStatus }, { name: 'Turbidez', status: turbStatus }];
+            sensors.forEach(sensor => {
+                if (sensor.status.toLowerCase().includes('erro')) allOk = false;
+                const recommendation = getActionRecommendation(sensor.name, sensor.status, envData);
+                if (recommendation.text) {
+                    hasIssues = true;
+                    const colorClasses = { red: 'bg-red-100 border-red-500 text-red-700', orange: 'bg-piscisense-orange bg-opacity-20 border-piscisense-orange text-orange-700', gray: 'bg-gray-100 border-gray-400 text-gray-600' };
+                    const icon = { red: `<svg class="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`, orange: `<svg class="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`, gray: `<svg class="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-1.414 1.414m0 0L12 12.05m4.95-4.95l-1.414-1.414M12 12.05L7.05 7.05m4.95 4.95l-1.414 1.414M7.05 16.95l-1.414-1.414m0 0L12 12.05m-4.95 4.95l1.414 1.414M12 12.05l4.95-4.95m-4.95 4.95l4.95 4.95"></path></svg>` };
+                    actionsListEl.innerHTML += `<div class="flex items-start p-4 rounded-lg border-l-4 ${colorClasses[recommendation.color]}"> ${icon[recommendation.color]} <div> <p class="font-bold">${sensor.name}</p> <p class="text-sm">${recommendation.text}</p> </div> </div>`;
+                }
+            });
+            if (!hasIssues) {
+                 actionsListEl.innerHTML = `<div class="flex items-center p-4 rounded-lg bg-piscisense-green-dark bg-opacity-20 border-l-4 border-piscisense-green-dark text-green-800"> <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <div> <p class="font-bold">Diagnóstico Geral</p> <p class="text-sm">Todos os parâmetros estão dentro da faixa ideal. Nenhuma ação é necessária.</p> </div> </div>`;
+            }
+
+            if (tempChart) tempChart.update();
+            if (phChart) phChart.update();
+            if (turbChart) turbChart.update();
+
+            statusIndicator.classList.remove('bg-piscisense-yellow');
+            statusIndicator.classList.add(allOk ? 'bg-piscisense-green-dark' : 'bg-red-500');
+            statusText.textContent = allOk ? 'Online' : 'Falha parcial';
+            lastUpdatedEl.textContent = `Atualizado às ${currentTime}`;
+        }
+
+        function updateStatusUI(element, statusText) {
+            element.textContent = statusText;
+            element.className = 'px-3 py-1 text-sm font-semibold text-white rounded-full';
+            if (statusText.toLowerCase().includes('ideal')) element.classList.add('bg-piscisense-green-dark');
+            else if (statusText.toLowerCase().includes('alerta') || statusText.toLowerCase().includes('elevada')) element.classList.add('bg-piscisense-orange');
+            else if (statusText.toLowerCase().includes('critico') || statusText.toLowerCase().includes('crítico')) element.classList.add('bg-red-500');
+            else element.classList.add('bg-gray-400');
+        }
+        
+        // --- FUNÇÕES DE GRÁFICOS ---
+        
+        function createSingleChart(canvasId, label, dataArray, borderColor, backgroundColor) {
+             const ctx = document.getElementById(canvasId).getContext('2d');
+             return new Chart(ctx, { type: 'line', data: { labels: chartLabels, datasets: [{ label, data: dataArray, borderColor, backgroundColor, fill: true, tension: 0.4 }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false }, x: {} } } });
+        }
+
+        function initializeAllCharts() {
+            tempChart = createSingleChart('tempChart', 'Temperatura (°C)', tempData, 'var(--piscisense-orange)', 'rgba(253, 198, 141, 0.1)');
+            phChart = createSingleChart('phChart', 'pH', phData, 'var(--piscisense-blue)', 'rgba(133, 203, 203, 0.1)');
+            turbChart = createSingleChart('turbChart', 'Turbidez (NTU)', turbData, 'var(--piscisense-text)', 'rgba(44, 62, 80, 0.1)');
+        }
+        
+        function showScreen(screenToShow) {
+            [initialSetupContainer, dashboardScreen, aiScreen].forEach(s => s.classList.add('hidden'));
+            if (screenToShow) screenToShow.classList.remove('hidden');
+        }
+        
+        // --- FUNÇÕES DE CONFIGURAÇÃO E GERENCIAMENTO DE DADOS ---
+
+        function openSettings() {
+            clearInterval(updateInterval);
+            const envData = JSON.parse(localStorage.getItem('piscisenseEnvData')) || {};
+
+            const predefinedSpecies = Array.from(speciesInput.options).map(option => option.value);
+            if (envData.species && !predefinedSpecies.includes(envData.species)) {
+                speciesInput.value = 'Outra';
+                otherSpeciesContainer.classList.remove('hidden');
+                otherSpeciesInput.value = envData.species;
+            } else {
+                speciesInput.value = envData.species || '';
+                otherSpeciesContainer.classList.add('hidden');
+                otherSpeciesInput.value = '';
+            }
+
+            volumeInput.value = envData.volume || '';
+            fishCountInput.value = envData.fishCount || '';
+            fishWeightInput.value = envData.fishWeight || '';
+            locationInput.value = envData.location || '';
+            
+            showScreen(initialSetupContainer);
+            configScreen.classList.add('hidden');
+            questionnaireScreen.classList.remove('hidden');
+        }
+
+        /**
+         * MODIFICADO: Salva os dados do questionário e envia o código da espécie para o Blynk.
+         */
+        async function saveQuestionnaire() {
+            // Mapeia o nome da espécie para o código numérico correspondente no ESP32
+            const speciesMap = {
+                "Tilápia": 1,
+                "Tambaqui": 2,
+                "Pacu": 3,
+                "Pintado": 4,
+                "Carpa": 5,
+                "Dourado": 6,
+                "Outra": 99 // Código para espécies não listadas
+            };
+
+            let speciesValue = speciesInput.value;
+            if (speciesValue === 'Outra') {
+                speciesValue = otherSpeciesInput.value.trim() || 'Outra (não especificado)';
+            }
+
+            const speciesCode = speciesMap[speciesInput.value] || 99;
+
+            const envData = {
+                species: speciesValue,
+                volume: parseFloat(volumeInput.value) || 1000,
+                fishCount: parseInt(fishCountInput.value) || 0,
+                fishWeight: parseFloat(fishWeightInput.value) || 0,
+                location: locationInput.value.trim()
+            };
+            localStorage.setItem('piscisenseEnvData', JSON.stringify(envData));
+
+            try {
+                const token = localStorage.getItem('blynkAuthToken');
+                if (token) {
+                    const url = `https://blynk.cloud/external/api/update?token=${token}&v10=${speciesCode}`;
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        console.log(`Perfil da espécie (${speciesCode}) enviado para o Blynk com sucesso!`);
+                    } else {
+                        console.error("Falha ao enviar o perfil da espécie para o Blynk.");
+                    }
+                }
+            } catch (error) {
+                console.error("Erro de rede ao tentar atualizar o perfil no Blynk:", error);
+            }
+            
+            startDashboard();
+        }
+
+        function startDashboard() {
+            showScreen(dashboardScreen);
+            if (!tempChart) initializeAllCharts();
+            updateDashboard();
+            clearInterval(updateInterval);
+            // ATENÇÃO: O intervalo de 5 segundos é ótimo para testes, mas pode exceder
+            // os limites da API de clima. Para uso real, considere um intervalo maior.
+            updateInterval = setInterval(updateDashboard, 10000); 
+        }
+
+        async function verifyTokenAndProceed() {
+            errorMessage.classList.add('hidden');
+            blynkToken = tokenInput.value.trim();
+            if (!blynkToken) {
+                errorMessage.textContent = 'Por favor, insira um token.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            saveTokenButton.disabled = true;
+            saveTokenButton.innerHTML = '<div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mx-auto"></div>';
+            try {
+                await fetchBlynkData('v0');
+                localStorage.setItem('blynkAuthToken', blynkToken);
+                
+                if (localStorage.getItem('piscisenseEnvData')) {
+                    startDashboard();
+                } else {
+                    configScreen.classList.add('hidden');
+                    questionnaireScreen.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Token inválido ou dispositivo offline. Verifique e tente novamente.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                saveTokenButton.disabled = false;
+                saveTokenButton.textContent = 'Verificar Token';
+            }
+        }
+        
+        function resetApp() {
+            clearInterval(updateInterval);
+            localStorage.removeItem('blynkAuthToken');
+            localStorage.removeItem('piscisenseEnvData');
+            
+            showScreen(initialSetupContainer);
+            configScreen.classList.remove('hidden');
+            questionnaireScreen.classList.add('hidden');
+            dashboardScreen.classList.add('hidden');
+            tokenInput.value = '';
+
+            if (tempChart) tempChart.destroy();
+            if (phChart) phChart.destroy();
+            if (turbChart) turbChart.destroy();
+            tempChart = phChart = turbChart = null;
+            chartLabels.length = 0; tempData.length = 0; phData.length = 0; turbData.length = 0;
+        }
+
+        // --- EVENT LISTENERS (OUVINTES DE EVENTOS) ---
+        
+        settingsButton.addEventListener('click', openSettings);
+        saveTokenButton.addEventListener('click', verifyTokenAndProceed);
+        saveQuestionnaireButton.addEventListener('click', saveQuestionnaire);
+        resetButton.addEventListener('click', resetApp);
+        
+        openAiButton.addEventListener('click', () => {
+             clearInterval(updateInterval);
+             showScreen(aiScreen);
+        });
+        backToDashboardButton.addEventListener('click', startDashboard);
+        runAiButton.addEventListener('click', runAIAnalysis);
+
+        speciesInput.addEventListener('change', () => {
+            otherSpeciesContainer.classList.toggle('hidden', speciesInput.value !== 'Outra');
+        });
+
+        // --- INICIALIZAÇÃO DA APLICAÇÃO ---
+        window.addEventListener('load', () => {
+             setTimeout(() => {
+                  splashScreen.classList.add('fade-out');
+                  setTimeout(() => {
+                        splashScreen.style.display = 'none';
+                        mainContent.classList.remove('hidden');
+                        mainContent.classList.add('fade-in');
+
+                        const savedToken = localStorage.getItem('blynkAuthToken');
+                        if (savedToken) {
+                            tokenInput.value = savedToken;
+                            verifyTokenAndProceed();
+                        } else {
+                            showScreen(initialSetupContainer);
+                            configScreen.classList.remove('hidden');
+                        }
+                  }, 500);
+             }, 2500);
+        });
+    </script>
+</body>
+</html>
