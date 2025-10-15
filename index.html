@@ -321,27 +321,65 @@
          * Para o contexto de um TCC em ambiente controlado, esta implementação é funcional.
          */
         async function callGeminiAPI(sensorData, envData) {
-            const apiKey = "AIzaSyCAXZSCJMZychpds3l12ppJHEvkoqRCUbs"; // Chave da API do Google AI.
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-            
-            const systemPrompt = "Você é Piscisense AI, um assistente especialista em piscicultura, focado em tanques de peixes. Sua missão é fornecer diagnósticos claros e recomendações práticas, em português do Brasil. Formate sua resposta com títulos em negrito (usando markdown: **Título**) e listas com asteriscos. Seja conciso, amigável e direto.";
-            
-            const userPrompt = `Analise a seguinte situação e forneça um diagnóstico e ações recomendadas.\n\n**Dados do Ambiente:**\n* Espécie Principal: ${envData.species || 'Não informado'}\n* Volume do Tanque: ${envData.volume || 'Não informado'} litros\n* Quantidade de Peixes: ${envData.fishCount || 'Não informado'}\n* Peso Médio: ${envData.fishWeight || 'Não informado'} gramas\n\n**Leituras Atuais dos Sensores:**\n* Temperatura da Água: ${sensorData.temp !== null ? sensorData.temp.toFixed(1) + ' °C' : 'Erro'}\n* pH: ${sensorData.ph !== null ? sensorData.ph.toFixed(2) : 'Erro'}\n* Turbidez: ${sensorData.turb !== null ? sensorData.turb.toFixed(0) + ' NTU' : 'Erro'}\n\nForneça um diagnóstico geral e uma lista de ações prioritárias.`;
+            const apiKey = "AIzaSyBIt8oNQvmfTFWhlz0c6xKrmRFpe96jJlM";
+            const model = "gemini-2.5-pro";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `
+            Você é Piscisense AI, um assistente especialista em piscicultura, focado em tanques de peixes.
+            Sua missão é fornecer diagnósticos claros e recomendações práticas, em português do Brasil.
+            Formate sua resposta com títulos em negrito (usando markdown: **Título**) e listas com asteriscos.
+            Seja conciso, amigável e direto.
+            `;
+
+            const userPrompt = `
+            Analise a seguinte situação e forneça um diagnóstico e ações recomendadas.
+
+            **Dados do Ambiente:**
+            * Espécie Principal: ${envData.species || 'Não informado'}
+            * Volume do Tanque: ${envData.volume || 'Não informado'} litros
+            * Quantidade de Peixes: ${envData.fishCount || 'Não informado'}
+            * Peso Médio: ${envData.fishWeight || 'Não informado'} gramas
+
+            **Leituras Atuais dos Sensores:**
+            * Temperatura da Água: ${sensorData.temp !== null ? sensorData.temp.toFixed(1) + ' °C' : 'Erro'}
+            * pH: ${sensorData.ph !== null ? sensorData.ph.toFixed(2) : 'Erro'}
+            * Turbidez: ${sensorData.turb !== null ? sensorData.turb.toFixed(0) + ' NTU' : 'Erro'}
+
+            Forneça um diagnóstico geral e uma lista de ações prioritárias.
+            `;
 
             const payload = {
-                contents: [{ parts: [{ text: userPrompt }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
+                contents: [{ parts: [{ text: userPrompt }] }]
             };
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) { throw new Error('Falha na comunicação com a API de IA.'); }
-            const result = await response.json();
-            return result.candidates[0].content.parts[0].text;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("❌ Erro detalhado da API Gemini:", errorText);
+                    throw new Error(`Falha na comunicação com a API de IA. Código: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (!result.candidates || !result.candidates[0]) {
+                    console.warn("⚠️ Resposta da IA vazia ou inesperada:", result);
+                    throw new Error("A IA não retornou uma resposta válida.");
+                }
+
+                return result.candidates[0].content.parts[0].text;
+
+            } catch (error) {
+                console.error("🚨 Erro na função callGeminiAPI:", error);
+                throw error; // Propaga o erro para ser tratado no runAIAnalysis()
+            }
         }
 
         function formatAIResponse(text) {
